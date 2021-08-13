@@ -106,7 +106,7 @@
                     type: "POST",
                     processData: false,
                     data: JSON.stringify(pc.localDescription),
-                    url: this.tempForm.serviceUrl + "/webrtc/publish?streamPath=" + this.streamPath,
+                    url: this.tempForm.serviceUrl + "/api/webrtc/publish?streamPath=" + this.streamPath,
                     dataType: "json"
                 });
                 console.log(result)
