@@ -1,134 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>monibuca webrtc publish tools</title>
     <!-- 引入样式 -->
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="ajax.min.js"></script>
 </head>
+
 <body>
-<div id="app">
-    <el-form :inline="true" :rules="rules" :model="tempForm" ref="ruleForm" class="demo-form-inline">
-        <el-form-item label="streamPath" prop="streamPath">
-            <el-input v-model="tempForm.streamPath"></el-input>
-        </el-form-item>
-        <el-form-item label="服务器地址" prop="serviceUrl">
-            <el-input v-model="tempForm.serviceUrl"></el-input>
-        </el-form-item>
-        <el-form-item>
-            <el-button type="primary" @click="public('ruleForm')" v-if="!remoteSDP">发布</el-button>
-            <el-button type="primary" @click="stopSession" v-else>暂停</el-button>
-        </el-form-item>
-    </el-form>
-    <div>
-        <video ref="video" :srcObject.prop="stream" width="640" height="480" autoplay muted></video>
+    <div id="app">
+        <el-form :inline="true" :rules="rules" :model="tempForm" ref="ruleForm" class="demo-form-inline">
+            <el-form-item label="streamPath" prop="streamPath">
+                <el-input v-model="tempForm.streamPath"></el-input>
+            </el-form-item>
+            <el-form-item label="服务器地址" prop="serviceUrl">
+                <el-input v-model="tempForm.serviceUrl"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="public('ruleForm')" v-if="!remoteSDP">发布</el-button>
+                <el-button type="primary" @click="stopSession" v-else>暂停</el-button>
+            </el-form-item>
+        </el-form>
+        <div>
+            <video ref="video" :srcObject.prop="stream" width="640" height="480" autoplay muted></video>
+        </div>
     </div>
-</div>
 
-<!-- import Vue before Element -->
-<script src="https://unpkg.com/vue/dist/vue.js"></script>
-<!-- import JavaScript -->
-<script src="https://unpkg.com/element-ui/lib/index.js"></script>
-<script>
-    let config = {iceServers: []};
-    let pc = new RTCPeerConnection(config);
-    let stream = null;
-    new Vue({
-        el: '#app',
-        data: function () {
-            return {
-                localSDP: pc && pc.localDescription && pc.localDescription.sdp,
-                remoteSDP: pc && pc.remoteDescription && pc.remoteDescription.sdp,
-                iceConnectionState: pc && pc.iceConnectionState,
-                stream: null,
-                previewStreamPath: false,
-                localSDPURL: "",
-                remoteSDPURL: "",
-                tempForm: {
-                    streamPath: "live/rtc",
-                    serviceUrl: '',
-                },
-                rules: {
-                    streamPath: [
-                        {required: true, message: '请输入streamPath', trigger: 'blur'},
-                    ],
-                    serviceUrl: [
-                        {required: true, message: '请输入服务器地址', trigger: 'blur'},
-                    ],
-                }
-            }
-        },
-        async mounted() {
-            pc.onsignalingstatechange = e => {
-                console.log(e);
-            };
-            pc.oniceconnectionstatechange = e => {
-                ELEMENT.Message({
-                    message: pc.iceConnectionState,
-                    type: "info"
-                })
-                this.iceConnectionState = pc.iceConnectionState;
-            };
-            pc.onicecandidate = event => {
-            };
-            try {
-                if (!this.stream) {
-                    this.stream = stream = await navigator.mediaDevices.getUserMedia(
-                        {video: true, audio: true}
-                    );
-                }
-            } catch (err) {
-                ELEMENT.Message({
-                    message: err,
-                    type: "error"
-                })
-            }
-        },
-        methods: {
-            public(ruleForm) {
-                if (!stream) {
-                    return;
-                }
-                this.$refs[ruleForm].validate((valid) => {
-                    if (!valid) {
-                        return false;
+    <!-- import Vue before Element -->
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script>
+        let config = { iceServers: [] };
+        let pc = new RTCPeerConnection(config);
+        let stream = null;
+        new Vue({
+            el: '#app',
+            data: function () {
+                return {
+                    localSDP: pc && pc.localDescription && pc.localDescription.sdp,
+                    remoteSDP: pc && pc.remoteDescription && pc.remoteDescription.sdp,
+                    iceConnectionState: pc && pc.iceConnectionState,
+                    stream: null,
+                    previewStreamPath: false,
+                    localSDPURL: "",
+                    remoteSDPURL: "",
+                    tempForm: {
+                        streamPath: "live/rtc",
+                        serviceUrl: '//localhost:8080',
+                    },
+                    rules: {
+                        streamPath: [
+                            { required: true, message: '请输入streamPath', trigger: 'blur' },
+                        ],
+                        serviceUrl: [
+                            { required: true, message: '请输入服务器地址', trigger: 'blur' },
+                        ],
                     }
-                    this.doPublish();
-                });
+                }
             },
-
-            async doPublish() {
-                pc.addStream(stream);
-                await pc.setLocalDescription(await pc.createOffer());
-                this.localSDP = pc.localDescription.sdp;
-                this.localSDPURL = URL.createObjectURL(new Blob([this.localSDP], {type: 'text/plain'}))
-                const result = await window.ajax({
-                    type: "POST",
-                    processData: false,
-                    data: JSON.stringify(pc.localDescription),
-                    url: this.tempForm.serviceUrl + "/api/webrtc/publish?streamPath=" + this.streamPath,
-                    dataType: "json"
-                });
-                console.log(result)
-                if (typeof result == "string") {
+            async mounted() {
+                pc.onsignalingstatechange = e => {
+                    console.log(e);
+                };
+                pc.oniceconnectionstatechange = e => {
                     ELEMENT.Message({
-                        message: result,
+                        message: pc.iceConnectionState,
+                        type: "info"
+                    })
+                    this.iceConnectionState = pc.iceConnectionState;
+                };
+                pc.onicecandidate = event => {
+                };
+                try {
+                    if (!this.stream) {
+                        this.stream = stream = await navigator.mediaDevices.getUserMedia(
+                            { video: true, audio: true }
+                        );
+                    }
+                } catch (err) {
+                    ELEMENT.Message({
+                        message: err,
                         type: "error"
                     })
-                    return;
                 }
-                this.remoteSDP = result.sdp;
-                this.remoteSDPURL = URL.createObjectURL(new Blob([this.remoteSDP], {type: 'text/plain'}))
-                pc.setRemoteDescription(new RTCSessionDescription(result));
             },
-            stopSession() {
-                pc.close();
-                pc = new RTCPeerConnection(config);
-                this.remoteSDP = "";
-                this.localSDP = "";
+            methods: {
+                public(ruleForm) {
+                    if (!stream) {
+                        return;
+                    }
+                    this.$refs[ruleForm].validate((valid) => {
+                        if (!valid) {
+                            return false;
+                        }
+                        this.doPublish();
+                    });
+                },
+
+                async doPublish() {
+                    pc.addStream(stream);
+                    await pc.setLocalDescription(await pc.createOffer());
+                    this.localSDP = pc.localDescription.sdp;
+                    this.localSDPURL = URL.createObjectURL(new Blob([this.localSDP], { type: 'text/plain' }))
+                    const result = await window.ajax({
+                        type: "POST",
+                        processData: false,
+                        data: JSON.stringify(pc.localDescription),
+                        url: this.tempForm.serviceUrl + "/api/webrtc/publish?streamPath=" + this.tempForm.streamPath,
+                        dataType: "json"
+                    });
+                    console.log(result)
+                    if (typeof result == "string") {
+                        ELEMENT.Message({
+                            message: result,
+                            type: "error"
+                        })
+                        return;
+                    }
+                    this.remoteSDP = result.sdp;
+                    this.remoteSDPURL = URL.createObjectURL(new Blob([this.remoteSDP], { type: 'text/plain' }))
+                    pc.setRemoteDescription(new RTCSessionDescription(result));
+                },
+                stopSession() {
+                    pc.close();
+                    pc = new RTCPeerConnection(config);
+                    this.remoteSDP = "";
+                    this.localSDP = "";
+                }
             }
-        }
-    })
-</script>
+        })
+    </script>
 </body>
+
 </html>
